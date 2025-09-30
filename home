@@ -1,0 +1,311 @@
+import React, { useState, useEffect } from "react";
+
+// Polished, dependency-free React (JS) version for CodeSandbox
+// - Nice top bar with hamburger
+// - Slide-out menu for sections
+// - Card layout, progress, reset
+// - Strike-through checked steps
+// - "?" helper with tooltip on hover + click-to-open info bubble (mobile-friendly)
+
+const PAGES = [
+  { id: "neuro", name: "Neurological Exam" },
+  { id: "ul", name: "Upper Limb" },
+  { id: "ll", name: "Lower Limb" },
+  { id: "cv", name: "Cardiovascular" },
+  { id: "resp", name: "Respiratory" },
+  { id: "abd", name: "Abdominal Exam" },
+];
+
+const STEPS = {
+  neuro: [
+    { label: "ID and consent", info: "" },
+    { label: "Enquire regarding olfactory changes", info: "CN I — olfactory nerve" },
+    { label: "Assess visual acuity", info: "CN II — optic nerve" },
+    { label: "Assess visual fields and neglect", info: "CN II — optic nerve; consider cortical neglect if abnormal" },
+    { label: "Assess pupillary responses", info: "Afferent: CN II; efferent: CN III (oculomotor)" },
+    { label: "Perform ophthalmoscopy", info: "CN II — optic nerve" },
+    { label: "Assess eye movements and saccades", info: "CN III (oculomotor), CN IV (trochlear), CN VI (abducens)" },
+    { label: "Assess facial sensation", info: "CN V — trigeminal (V1/V2/V3) sensory" },
+    { label: "Assess jaw clench", info: "CN V — trigeminal motor (V3)" },
+    { label: "Assess jaw jerk", info: "CN V — trigeminal (afferent & efferent via mesencephalic nucleus)" },
+    { label: "Assess muscles of facial expression", info: "CN VII — facial nerve" },
+    { label: "Assess hearing", info: "CN VIII — vestibulocochlear nerve" },
+    { label: "Assess palatal movements", info: "CN IX (glossopharyngeal) & CN X (vagus)" },
+    { label: "Assess cough", info: "CN X — vagus (afferent & efferent)" },
+    { label: "Assess tongue movement and strength", info: "CN XII — hypoglossal nerve" },
+    { label: "Assess neck and shoulder movement", info: "CN XI — accessory nerve (sternocleidomastoid, trapezius)" },
+  ],
+  ul: [
+    { label: "ID and consent", info: "" },
+    { label: "Inspection of upper limbs", info: "?wasting, ?tremor, ?pronator drift" },
+    { label: "Tone", info: "roll wrist; assess catch" },
+    { label: "Power of shoulder abduction", info: "deltoid — axillary nerve; C5–C6" },
+    { label: "Power of shoulder adduction", info: "pectoralis major — medial & lateral pectoral nerves; C6–T1" },
+    { label: "Power of elbow flexion", info: "biceps brachii — musculocutaneous nerve; C5–C6" },
+    { label: "Power of elbow extension", info: "triceps brachii — radial nerve; C7–C8" },
+    { label: "Power of wrist flexion", info: "flexor carpi radialis — median nerve; C6–C7; ± flexor carpi ulnaris — ulnar nerve; C7–T1" },
+    { label: "Power of wrist extension", info: "extensor carpi radialis longus/brevis — radial (posterior interosseous) nerve; C6–C7" },
+    { label: "Power of finger abduction", info: "dorsal interossei — ulnar nerve; T1" },
+    { label: "Power of finger flexion", info: "flexor digitorum profundus — median (lateral half) & ulnar (medial half) nerves; C8–T1" },
+    { label: "Power of thumb abduction", info: "abductor pollicis brevis — median nerve (recurrent branch); C8–T1 (mainly T1)" },
+    { label: "Upper-limb reflexes", info: "" },
+    { label: "Assess upper-limb coordination", info: "eyes open and closed" },
+    { label: "Assess for dysdiadochokinesia", info: "" },
+    { label: "Assess sensation — dermatomal and glove/stocking", info: "pin, cotton, vibration" },
+    { label: "Assess joint proprioception", info: "" },
+  ],
+  ll: [
+    { label: "ID and consent", info: "" },
+    { label: "Inspection of lower limbs", info: "?wasting" },
+    { label: "Tone", info: "roll leg; assess for catch; assess for clonus" },
+    { label: "Power of hip flexion", info: "iliopsoas — femoral nerve; L1–L2" },
+    { label: "Power of hip extension", info: "gluteus maximus — inferior gluteal nerve; L5–S2 (mainly S1)" },
+    { label: "Power of knee flexion", info: "hamstrings — sciatic nerve (tibial division); L5–S1 (± S2)" },
+    { label: "Power of knee extension", info: "quadriceps femoris — femoral nerve; L3–L4" },
+    { label: "Power of ankle dorsiflexion", info: "tibialis anterior — deep peroneal (fibular) nerve; L4–L5" },
+    { label: "Power of ankle plantar flexion", info: "gastrocnemius–soleus — tibial nerve; S1–S2" },
+    { label: "Power of great toe flexion", info: "flexor hallucis longus — tibial nerve; S1–S2" },
+    { label: "Lower-limb reflexes", info: "" },
+    { label: "Assess lower-limb coordination", info: "" },
+    { label: "Assess sensation — dermatomal and glove/stocking", info: "sharp, cotton, vibration" },
+    { label: "Toe proprioception", info: "" },
+    { label: "Gait and tandem gait", info: "" },
+    { label: "Romberg test", info: "" },
+  ],
+  cv: [
+    { label: "ID and consent", info: "" },
+    { label: "Inspect from the end of the bed", info: "?cyanosis, ?scars, ?previous chest drains" },
+    { label: "Inspect hands", info: "?tendon xanthomata, ?peripheral cyanosis, ?clubbing, ?Osler nodes, ?Janeway lesions, ?palmar erythema" },
+    { label: "Inspect the face", info: "?malar flush (mitral stenosis), ?xanthelasma, ?corneal arcus, ?conjunctival pallor, ?haemorrhage" },
+    { label: "Inspect the mouth", info: "?central cyanosis, ?high-arched palate" },
+    { label: "Palpate pulse", info: "?rhythm, ?rate, ?radio-radial delay, ?radio-femoral delay; ask for BP; ?collapsing (water-hammer) pulse" },
+    { label: "Inspect JVP waveform", info: "?elevated, ?prominent 'cv' waves" },
+    { label: "Assess hepatojugular reflux (HJR)", info: "if positive → right ventricular failure" },
+    { label: "Palpate apex beat", info: "?displaced, ?heaving, ?tapping" },
+    { label: "Palpate for thrills", info: "" },
+    { label: "Palpate for right ventricular heave", info: "" },
+    { label: "Auscultate anterior chest", info: "mitral area (apex and axilla in left lateral position), left sternal edge, carotid arteries" },
+    { label: "Auscultate posterior chest", info: "" },
+    { label: "Palpate for sacral oedema", info: "" },
+    { label: "Palpate for lower-limb oedema", info: "" },
+  ],
+  resp: [
+    { label: "ID and consent", info: "" },
+    { label: "Inspection", info: "?scars, ?chest wall asymmetry, ?cyanosis, ?work of breathing (WOB), ?audible breathing" },
+    { label: "Inspect on deep inspiration", info: "?chest wall asymmetry > pneumonectomy or pleural effusion" },
+    { label: "Observe deliberate cough", info: "dry + crackles = ILD; productive = bronchiectasis" },
+    { label: "Inspect hands", info: "?tar staining, ?peripheral cyanosis, ?RA stigmata, ?clubbing, ?skin thickening (systemic sclerosis)" },
+    { label: "Inspect tremor", info: "?salbutamol overuse; poorly controlled obstructive disease; ?CO2 retention tremor" },
+    { label: "Palpate pulse and observe respiratory rate", info: "" },
+    { label: "Inspect eyes", info: "?conjunctival pallor" },
+    { label: "Inspect mouth", info: "?central cyanosis" },
+    { label: "Inspect JVP and hepatojugular reflux", info: "?elevated > cor pulmonale; HJR positive > right heart failure" },
+    { label: "Palpate for cervical lymphadenopathy", info: "" },
+    { label: "Palpate for tracheal deviation", info: "" },
+    { label: "Palpate chest expansion (upper and lower parts)", info: "?symmetrically decreased or asymmetrically decreased" },
+    { label: "Anterior tactile vocal fremitus (hands)", info: "increased > consolidation/mass; decreased > effusion" },
+    { label: "Anterior percussion of chest", info: "" },
+    { label: "Auscultate anterior chest", info: "?normal pattern; ?wheeze; ?crepitations (fixed or mobile)" },
+    { label: "Anterior vocal resonance (stethoscope)", info: "" },
+    { label: "Posterior tactile vocal fremitus (hands)", info: "" },
+    { label: "Posterior percussion of chest", info: "" },
+    { label: "Posterior auscultation of chest", info: "" },
+    { label: "Posterior vocal resonance (stethoscope)", info: "" },
+    { label: "Examine ankles", info: "" },
+  ],
+  abd: [
+    { label: "ID and consent", info: "" },
+    { label: "Inspect abdomen", info: "?Jaundice ?Ascites ?Tattoos ?Nutritional status ?scars ?J-shaped scar ?peritoneal dialysis, ?Spider Naevi" },
+    { label: "Inspect hands", info: "?thinning of skin, ?bruising, ?Dupuytren's contracture, ?palmar erythema, ?spoon-shaped nails" },
+    { label: "Assess for Tremor", info: "Fine tremor = ETOH/Tacrolimus, Coarse Tremor = ?Asterixis" },
+    { label: "Inspect face", info: "?Parotid swelling, ?jaundice, ?angular cheilitis" },
+    { label: "Inspect eyes", info: "?jaundice sclera, ?pallor of conjunctiva" },
+    { label: "Inspect oral cavity", info: "?ulcers, ?candidiasis, ?atrophic glossitis ?beefy red lounge" },
+    { label: "Cervical lymph node examination", info: "" },
+    { label: "Inspect back", info: "?scars, especially nephrectomy scars" },
+    { label: "If functional fistula - assess for thrill", info: "" },
+    { label: "Axillary lymph node examination", info: "" },
+    { label: "Examine abdomen in 9 regions superficially", info: "" },
+    { label: "Examine abdomen in 9 regions deeply", info: "" },
+    { label: "Palpate for Pulsatile + Expansive mass", info: "would suggest AAA" },
+    { label: "Palpate for hepatomegaly", info: "Start in RIF, move superiorly then medially" },
+    { label: "Percuss for hepatomegaly", info: "Start in RIF" },
+    { label: "Palpate for splenomegaly", info: "start in RIF, move diagonally up abdomen" },
+    { label: "Percuss for splenomegaly", info: "" },
+    { label: "Palpate for kidneys bilaterally", info: "if enlarged, ballot" },
+    { label: "Percuss for Ascites", info: "move outwards from umbilicus" },
+    { label: "Auscultate for bowel sounds", info: "" },
+  ],
+};
+
+function normalize(list) {
+  return list.map((item) => (typeof item === "string" ? { label: item, info: "" } : item));
+}
+
+function App() {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [active, setActive] = useState(PAGES[0].id);
+  const [openTipIdx, setOpenTipIdx] = useState(null); // which step's info bubble is open
+  const [ticks, setTicks] = useState(
+    Object.fromEntries(PAGES.map((p) => [p.id, normalize(STEPS[p.id]).map(() => false)]))
+  );
+
+  const steps = normalize(STEPS[active]);
+  const page = PAGES.find((p) => p.id === active) || PAGES[0];
+  const doneCount = ticks[active].filter(Boolean).length;
+
+  useEffect(() => {
+    // close any open tip when switching pages
+    setOpenTipIdx(null);
+  }, [active]);
+
+  function toggleStep(index, value) {
+    setTicks((prev) => ({
+      ...prev,
+      [active]: prev[active].map((v, i) => (i === index ? value : v)),
+    }));
+  }
+  function resetPage() {
+    setTicks((prev) => ({ ...prev, [active]: steps.map(() => false) }));
+    setOpenTipIdx(null);
+  }
+  function resetAll() {
+    setTicks(Object.fromEntries(PAGES.map((p) => [p.id, normalize(STEPS[p.id]).map(() => false)])));
+    setOpenTipIdx(null);
+  }
+
+  return (
+    <div className="app-root">
+      <style>{`
+        :root{--bg:#f7f7fb;--card:#fff;--border:#eaeaea;--text:#111;--muted:#6b7280;--brand:#0f62fe}
+        *{box-sizing:border-box}
+        body,html,#root{height:100%}
+        .app-root{min-height:100vh;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif}
+        .topbar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.8);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+        .topbar-inner{max-width:900px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:12px 16px}
+        .title{font-weight:600;letter-spacing:.2px}
+        .iconbtn{border:1px solid var(--border);background:#fff;border-radius:12px;padding:8px;cursor:pointer}
+        .layout{max-width:900px;margin:0 auto;padding:20px 16px}
+        .pagehdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+        .badge{display:inline-block;font-size:12px;color:var(--muted)}
+        .btn{border:1px solid var(--border);background:#fff;border-radius:10px;padding:6px 10px;cursor:pointer}
+        .btn:hover{background:#fafafa}
+        .btn.primary{background:var(--brand);color:#fff;border-color:transparent}
+        .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 1px 2px rgba(0,0,0,.04);}
+        .card-h{padding:16px 16px 8px;border-bottom:1px solid var(--border)}
+        .card-b{padding:8px 0}
+        .list{list-style:none;margin:0;padding:0}
+        .row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
+        .row:last-child{border-bottom:none}
+        .label{font-size:14px}
+        .label.checked{color:var(--muted);text-decoration:line-through}
+        .right{display:flex;align-items:center;gap:10px}
+        .labelwrap{display:inline-flex;align-items:baseline;gap:8px;position:relative}
+        .qmark{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:1px solid var(--border);border-radius:999px;font-size:10px;line-height:1;cursor:pointer;background:#fff}
+        .checkbox{width:18px;height:18px}
+        .tip{position:absolute;top:22px;left:0;z-index:10;max-width:320px;background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;box-shadow:0 6px 18px rgba(0,0,0,.08);font-size:12px;color:var(--text)}
+        .tip-close{border:none;background:transparent;cursor:pointer;font-size:12px;color:var(--muted);position:absolute;top:6px;right:8px}
+        /* Drawer */
+        .overlay{position:fixed;inset:0;background:rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .2s}
+        .overlay.open{opacity:1;pointer-events:auto}
+        .drawer{position:fixed;top:0;right:-320px;height:100vh;width:320px;background:#fff;border-left:1px solid var(--border);transition:right .25s ease;display:flex;flex-direction:column}
+        .drawer.open{right:0}
+        .drawer-header{padding:16px;border-bottom:1px solid var(--border);font-weight:600}
+        .nav{padding:10px}
+        .nav button{display:block;width:100%;text-align:left;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#fff;margin-bottom:8px}
+        .nav button.active{background:#f0f6ff;border-color:#cfe0ff}
+        .drawer-actions{margin-top:auto;padding:12px;border-top:1px solid var(--border);display:grid;gap:8px}
+      `}</style>
+
+      {/* Top bar */}
+      <div className="topbar">
+        <div className="topbar-inner">
+          <div className="title">PACES Examination Steps</div>
+          <button className="iconbtn" aria-label="Open menu" onClick={() => setDrawerOpen(true)}>
+            {/* simple hamburger */}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Drawer + overlay */}
+      <div className={"overlay " + (drawerOpen ? "open" : "")} onClick={() => setDrawerOpen(false)} />
+      <aside className={"drawer " + (drawerOpen ? "open" : "")}> 
+        <div className="drawer-header">Sections</div>
+        <div className="nav">
+          {PAGES.map((p) => (
+            <button
+              key={p.id}
+              className={p.id === active ? "active" : ""}
+              onClick={() => { setActive(p.id); setDrawerOpen(false); }}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
+        <div className="drawer-actions">
+          <button className="btn" onClick={resetPage}>Reset current page</button>
+          <button className="btn" onClick={resetAll}>Reset all pages</button>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div className="layout">
+        <div className="pagehdr">
+          <div>
+            <h2 style={{ margin: 0 }}>{page.name}</h2>
+            <div className="badge">{doneCount} / {steps.length} completed</div>
+          </div>
+          <button className="btn" onClick={resetPage}>Reset</button>
+        </div>
+
+        <div className="card">
+          <div className="card-h">Checklist</div>
+          <div className="card-b">
+            <ul className="list">
+              {steps.map((step, idx) => (
+                <li key={idx} className="row">
+                  <div className="labelwrap">
+                    <span className={"label " + (ticks[active][idx] ? "checked" : "")}>
+                      {step.label}
+                    </span>
+                    <button
+                      className="qmark"
+                      title={step.info || `Info for ${step.label}`}
+                      aria-label={`Info about ${step.label}`}
+                      aria-expanded={openTipIdx === idx}
+                      onClick={() => setOpenTipIdx(openTipIdx === idx ? null : idx)}
+                    >
+                      ?
+                    </button>
+                    {openTipIdx === idx && step.info && (
+                      <div className="tip" role="dialog" aria-label={`Details: ${step.label}`}>
+                        <button className="tip-close" onClick={() => setOpenTipIdx(null)} aria-label="Close">×</button>
+                        {step.info}
+                      </div>
+                    )}
+                  </div>
+                  <div className="right">
+                    <input
+                      className="checkbox"
+                      type="checkbox"
+                      checked={ticks[active][idx]}
+                      onChange={(e) => toggleStep(idx, e.target.checked)}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <div style={{ marginTop: 8, color: "var(--muted)", fontSize: 12 }}>
+          Placeholder content shown for non-abdominal sections. Replace with real PACES steps when ready.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default App;
